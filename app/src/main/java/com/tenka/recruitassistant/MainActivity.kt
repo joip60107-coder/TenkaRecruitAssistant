@@ -1,4 +1,3 @@
-
 package com.tenka.recruitassistant
 
 import android.app.Activity
@@ -39,15 +38,15 @@ class MainActivity : Activity() {
         root.addView(title)
 
         val subtitle = TextView(this).apply {
-            text = "\n辨識遊戲中的五個徵才標籤，分析最佳組合。"
-            textSize = 16f
+            text = "\n五個徵才標籤組合分析"
+            textSize = 17f
             setTextColor(Color.LTGRAY)
             gravity = Gravity.CENTER
         }
         root.addView(subtitle)
 
         val tagTitle = TextView(this).apply {
-            text = "\n測試標籤"
+            text = "\n目前標籤"
             textSize = 19f
             setTextColor(Color.WHITE)
         }
@@ -55,16 +54,16 @@ class MainActivity : Activity() {
 
         tags.forEach { tag ->
             val item = TextView(this).apply {
-                text = "　• $tag"
+                text = "• $tag"
                 textSize = 18f
                 setTextColor(Color.WHITE)
-                setPadding(8, 12, 8, 12)
+                setPadding(8, 10, 8, 10)
             }
             root.addView(item)
         }
 
         val button = Button(this).apply {
-            text = "開始分析（測試）"
+            text = "分析全部組合"
             textSize = 18f
         }
         root.addView(
@@ -76,14 +75,39 @@ class MainActivity : Activity() {
         )
 
         val result = TextView(this).apply {
-            text = "\n目前是主畫面測試版。\n後續會加入畫面截取、中文 OCR，以及 25 種標籤組合分析。"
+            text = "\n按下按鈕即可分析組合。"
             textSize = 16f
             setTextColor(Color.rgb(180, 220, 180))
+            setPadding(0, 16, 0, 16)
         }
         root.addView(result)
 
         button.setOnClickListener {
-            result.text = "\n測試成功！\n目前讀取到 ${tags.size} 個測試標籤。\n下一階段將加入組合分析。"
+            val combinations = mutableListOf<String>()
+
+            for (i in tags.indices) {
+                combinations.add(tags[i])
+
+                for (j in i + 1 until tags.size) {
+                    combinations.add(
+                        "${tags[i]} + ${tags[j]}"
+                    )
+
+                    for (k in j + 1 until tags.size) {
+                        combinations.add(
+                            "${tags[i]} + ${tags[j]} + ${tags[k]}"
+                        )
+                    }
+                }
+            }
+
+            result.text = buildString {
+                append("分析完成！共 ${combinations.size} 種組合\n\n")
+
+                combinations.forEachIndexed { index, item ->
+                    append("${index + 1}. $item\n")
+                }
+            }
         }
 
         val scroll = ScrollView(this)
