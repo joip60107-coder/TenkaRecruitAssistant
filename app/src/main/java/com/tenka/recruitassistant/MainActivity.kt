@@ -1,7 +1,11 @@
+
 package com.tenka.recruitassistant
 
 import android.app.Activity
 import android.os.Bundle
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
 import android.graphics.Color
 import android.view.Gravity
 import android.view.ViewGroup
@@ -9,6 +13,7 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import android.widget.Toast
 
 class MainActivity : Activity() {
 
@@ -19,6 +24,9 @@ class MainActivity : Activity() {
         "魔族",
         "防禦"
     )
+
+    private var waitingForPermission = false
+    private lateinit var status: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -45,8 +53,41 @@ class MainActivity : Activity() {
         }
         root.addView(subtitle)
 
+        status = TextView(this).apply {
+            text = "\n懸浮按鈕尚未啟用"
+            textSize = 16f
+            setTextColor(Color.rgb(180, 220, 180))
+            setPadding(0, 12, 0, 12)
+        }
+        root.addView(status)
+
+        val floatingButton = Button(this).apply {
+            text = "啟用懸浮按鈕「徵」"
+            textSize = 18f
+        }
+        root.addView(
+            floatingButton,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        )
+
+        floatingButton.setOnClickListener {
+            if (Settings.canDrawOverlays(this)) {
+                startFloatingService()
+            } else {
+                waitingForPermission = true
+                val intent = Intent(
+                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    Uri.parse("package:$packageName")
+                )
+                startActivity(intent)
+            }
+        }
+
         val tagTitle = TextView(this).apply {
-            text = "\n目前標籤"
+            text = "\n目前測試標籤"
             textSize = 19f
             setTextColor(Color.WHITE)
         }
@@ -62,12 +103,12 @@ class MainActivity : Activity() {
             root.addView(item)
         }
 
-        val button = Button(this).apply {
+        val analyzeButton = Button(this).apply {
             text = "分析全部組合"
             textSize = 18f
         }
         root.addView(
-            button,
+            analyzeButton,
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
@@ -82,7 +123,7 @@ class MainActivity : Activity() {
         }
         root.addView(result)
 
-        button.setOnClickListener {
+        analyzeButton.setOnClickListener {
             val combinations = mutableListOf<String>()
 
             for (i in tags.indices) {
@@ -103,7 +144,6 @@ class MainActivity : Activity() {
 
             result.text = buildString {
                 append("分析完成！共 ${combinations.size} 種組合\n\n")
-
                 combinations.forEachIndexed { index, item ->
                     append("${index + 1}. $item\n")
                 }
@@ -113,5 +153,28 @@ class MainActivity : Activity() {
         val scroll = ScrollView(this)
         scroll.addView(root)
         setContentView(scroll)
+    }
+
+    override fun onResume() {
+        super.onResume()
+
+        if (waitingForPermission &&
+            Settings.canDrawOverlays(this)
+        ) {
+            waitingForPermission = false
+            startFloatingService()
+        }
+    }
+
+    private fun startFloatingService() {
+        val intent = Intent(this, FloatingService::class.java)
+        startService(intent)
+
+        status.text = "\n懸浮按鈕已啟動！可以返回遊戲測試。"
+        Toast.makeText(
+            this,
+            "懸浮按鈕已啟動",
+            Toast.LENGTH_SHORT
+        ).show()
     }
 }
