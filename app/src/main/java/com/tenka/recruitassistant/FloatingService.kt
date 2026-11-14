@@ -14,14 +14,24 @@ import android.widget.TextView
 
 class FloatingService : Service() {
 
+    companion object {
+        const val ACTION_HIDE = "com.tenka.recruitassistant.HIDE"
+        const val ACTION_SHOW = "com.tenka.recruitassistant.SHOW"
+    }
+
     private lateinit var windowManager: WindowManager
     private var floatingButton: TextView? = null
+    private var isButtonVisible = false
+    private lateinit var layoutParams: WindowManager.LayoutParams
 
     override fun onCreate() {
         super.onCreate()
-
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
+        createFloatingButton()
+        showFloatingButton()
+    }
 
+    private fun createFloatingButton() {
         val button = TextView(this).apply {
             text = "徵"
             textSize = 22f
@@ -33,24 +43,30 @@ class FloatingService : Service() {
                 setStroke(3, Color.WHITE)
             }
             elevation = 8f
+
             setOnClickListener {
-    val intent = Intent(
-        this@FloatingService,
-        MainActivity::class.java
-    ).apply {
-        addFlags(
-            Intent.FLAG_ACTIVITY_NEW_TASK or
-            Intent.FLAG_ACTIVITY_SINGLE_TOP
-        )
-        putExtra("start_capture", true)
-    }
-    startActivity(intent)
+                hideFloatingButton()
+
+                val intent = Intent(
+                    this@FloatingService,
+                    MainActivity::class.java
+                ).apply {
+                    addFlags(
+                        Intent.FLAG_ACTIVITY_NEW_TASK or
+                        Intent.FLAG_ACTIVITY_SINGLE_TOP
+                    )
+                    putExtra("start_capture", true)
+                }
+
+                startActivity(intent)
             }
         }
 
+        floatingButton = button
+
         val size = (56 * resources.displayMetrics.density).toInt()
 
-        val params = WindowManager.LayoutParams(
+        layoutParams = WindowManager.LayoutParams(
             size,
             size,
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
@@ -64,15 +80,36 @@ class FloatingService : Service() {
             x = 20
             y = 300
         }
+    }
 
-        windowManager.addView(button, params)
-        floatingButton = button
+    private fun showFloatingButton() {
+        if (!isButtonVisible && floatingButton != null) {
+            windowManager.addView(floatingButton, layoutParams)
+            isButtonVisible = true
+        }
+    }
+
+    private fun hideFloatingButton() {
+        if (isButtonVisible && floatingButton != null) {
+            windowManager.removeView(floatingButton)
+            isButtonVisible = false
+        }
+    }
+
+    override fun onStartCommand(
+        intent: Intent?,
+        flags: Int,
+        startId: Int
+    ): Int {
+        when (intent?.action) {
+            ACTION_HIDE -> hideFloatingButton()
+            ACTION_SHOW -> showFloatingButton()
+        }
+        return START_STICKY
     }
 
     override fun onDestroy() {
-        floatingButton?.let {
-            windowManager.removeView(it)
-        }
+        hideFloatingButton()
         floatingButton = null
         super.onDestroy()
     }
