@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
+import android.media.projection.MediaProjectionManager
 import android.graphics.Color
 import android.view.Gravity
 import android.view.ViewGroup
@@ -27,9 +28,13 @@ class MainActivity : Activity() {
 
     private var waitingForPermission = false
     private lateinit var status: TextView
+    private lateinit var projectionManager: MediaProjectionManager
+private val SCREEN_CAPTURE_REQUEST = 1001
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        projectionManager =
+    getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
 
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
