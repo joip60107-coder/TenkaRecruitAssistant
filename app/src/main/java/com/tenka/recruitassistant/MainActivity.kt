@@ -33,6 +33,7 @@ private val textRecognizer by lazy {
     )
 
     private var waitingForPermission = false
+    private var isPickingImage = false
     private lateinit var status: TextView
     private lateinit var projectionManager: MediaProjectionManager
 private val SCREEN_CAPTURE_REQUEST = 1001
@@ -182,6 +183,7 @@ private val SCREEN_CAPTURE_REQUEST = 1001
     private var latestScreenshotUri: Uri? = null
 
 private fun openScreenshotPicker() {
+    isPickingImage = true
     val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
         type = "image/*"
     }
@@ -193,7 +195,10 @@ override fun onActivityResult(
     data: Intent?
 ) {
     super.onActivityResult(requestCode, resultCode, data)
-
+if (requestCode == 2001) {
+    isPickingImage = false
+}
+    
     if (requestCode == 2001 && resultCode == RESULT_OK) {
         latestScreenshotUri = data?.data
         if (latestScreenshotUri != null) {
@@ -229,6 +234,7 @@ override fun onActivityResult(
     }
 }
     override fun onResume() {
+    
         super.onResume()
 
         if (waitingForPermission &&
@@ -238,7 +244,16 @@ override fun onActivityResult(
             startFloatingService()
         }
     }
+override fun onStop() {
+    super.onStop()
 
+    if (!isPickingImage) {
+        val showIntent = Intent(this, FloatingService::class.java).apply {
+            action = FloatingService.ACTION_SHOW
+        }
+        startService(showIntent)
+    }
+}
     private fun startFloatingService() {
         val intent = Intent(this, FloatingService::class.java)
         startService(intent)
