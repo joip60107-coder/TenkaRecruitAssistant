@@ -15,9 +15,15 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
-
+import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.text.TextRecognition
+import com.google.mlkit.vision.text.chinese.ChineseTextRecognizerOptions
 class MainActivity : Activity() {
-
+private val textRecognizer by lazy {
+    TextRecognition.getClient(
+        ChineseTextRecognizerOptions.Builder().build()
+    )
+}
     private val tags = listOf(
         "火屬性",
         "群體攻擊",
@@ -178,7 +184,34 @@ override fun onActivityResult(
     if (requestCode == 2001 && resultCode == RESULT_OK) {
         latestScreenshotUri = data?.data
         if (latestScreenshotUri != null) {
-            status.text = "已選取截圖，準備辨識。"
+    status.text = "正在辨識截圖..."
+
+    try {
+        val image = InputImage.fromFilePath(
+            this,
+            latestScreenshotUri!!
+        )
+
+        textRecognizer.process(image)
+            .addOnSuccessListener { visionText ->
+                val recognizedText = visionText.text
+                val foundTags = tags.filter { tag ->
+                    recognizedText.contains(tag)
+                }
+
+                status.text = if (foundTags.isNotEmpty()) {
+                    "辨識到的標籤：\n" +
+                    foundTags.joinToString("\n") { "・$it" }
+                } else {
+                    "沒有辨識到測試標籤，請確認截圖是否清晰。"
+                }
+            }
+            .addOnFailureListener {
+                status.text = "辨識失敗，請重新選取截圖。"
+            }
+    } catch (e: Exception) {
+        status.text = "讀取截圖失敗：${e.message}"
+    }
         }
     }
 }
