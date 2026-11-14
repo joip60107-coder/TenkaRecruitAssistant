@@ -34,12 +34,17 @@ class FloatingService : Service() {
             }
             elevation = 8f
             setOnClickListener {
-                val intent = Intent(
-                    this@FloatingService,
-                    MainActivity::class.java
-                )
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                startActivity(intent)
+    val intent = Intent(
+        this@FloatingService,
+        MainActivity::class.java
+    ).apply {
+        addFlags(
+            Intent.FLAG_ACTIVITY_NEW_TASK or
+            Intent.FLAG_ACTIVITY_SINGLE_TOP
+        )
+        putExtra("start_capture", true)
+    }
+    startActivity(intent)
             }
         }
 
