@@ -168,6 +168,15 @@ private val SCREEN_CAPTURE_REQUEST = 1001
     intent.removeExtra("start_capture")
     openScreenshotPicker()
         }
+    }  
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+
+        if (intent.getBooleanExtra("start_capture", false)) {
+            intent.removeExtra("start_capture")
+            openScreenshotPicker()
+        }
     }
 
     private var latestScreenshotUri: Uri? = null
