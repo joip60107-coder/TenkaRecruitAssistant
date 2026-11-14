@@ -164,6 +164,10 @@ private val SCREEN_CAPTURE_REQUEST = 1001
         val scroll = ScrollView(this)
         scroll.addView(root)
         setContentView(scroll)
+        if (intent.getBooleanExtra("start_capture", false)) {
+    intent.removeExtra("start_capture")
+    openScreenshotPicker()
+        }
     }
 
     private var latestScreenshotUri: Uri? = null
