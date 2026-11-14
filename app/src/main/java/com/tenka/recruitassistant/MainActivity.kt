@@ -160,6 +160,28 @@ private val SCREEN_CAPTURE_REQUEST = 1001
         setContentView(scroll)
     }
 
+    private var latestScreenshotUri: Uri? = null
+
+private fun openScreenshotPicker() {
+    val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
+        type = "image/*"
+    }
+    startActivityForResult(intent, 2001)
+}
+override fun onActivityResult(
+    requestCode: Int,
+    resultCode: Int,
+    data: Intent?
+) {
+    super.onActivityResult(requestCode, resultCode, data)
+
+    if (requestCode == 2001 && resultCode == RESULT_OK) {
+        latestScreenshotUri = data?.data
+        if (latestScreenshotUri != null) {
+            status.text = "已選取截圖，準備辨識。"
+        }
+    }
+}
     override fun onResume() {
         super.onResume()
 
