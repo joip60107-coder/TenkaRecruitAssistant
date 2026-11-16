@@ -105,9 +105,12 @@ class FloatingService : Service() {
             ACTION_HIDE -> hideFloatingButton()
             ACTION_SHOW -> showFloatingButton()
         }
-        return START_STICKY
+        return START_NOT_STICKY
     }
-
+override fun onTaskRemoved(rootIntent: Intent?) {
+    stopSelf()
+    super.onTaskRemoved(rootIntent)
+}
     override fun onDestroy() {
         hideFloatingButton()
         floatingButton = null
