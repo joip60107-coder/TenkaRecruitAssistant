@@ -25,13 +25,41 @@ private val textRecognizer by lazy {
     )
 }
     private val tags = listOf(
-        "火屬性",
-        "群體攻擊",
-        "小體型",
-        "魔族",
-        "防禦"
-    )
-
+    "火屬性",
+    "水屬性",
+    "風屬性",
+    "光屬性",
+    "闇屬性",
+    "攻擊者",
+    "守護者",
+    "治療者",
+    "妨礙者",
+    "輔助者",
+    "人類",
+    "魔族",
+    "亞人",
+    "小體型",
+    "中體型",
+    "貧乳",
+    "美乳",
+    "巨乳",
+    "士兵",
+    "菁英",
+    "領袖",
+    "輸出",
+    "保護",
+    "防禦",
+    "回復",
+    "干擾",
+    "支援",
+    "削弱",
+    "爆發力",
+    "生存力",
+    "越戰越強",
+    "群體攻擊",
+    "回擊"
+)
+private var detectedTags: List<String> = emptyList()
     private var waitingForPermission = false
     private var isPickingImage = false
     private lateinit var status: TextView
@@ -136,30 +164,36 @@ private val SCREEN_CAPTURE_REQUEST = 1001
         root.addView(result)
 
         analyzeButton.setOnClickListener {
-            val combinations = mutableListOf<String>()
+    val combinations = mutableListOf<String>()
+    val currentTags = detectedTags
 
-            for (i in tags.indices) {
-                combinations.add(tags[i])
+    if (currentTags.isEmpty()) {
+        result.text = "請先選擇截圖並辨識標籤。"
+        return@setOnClickListener
+    }
 
-                for (j in i + 1 until tags.size) {
-                    combinations.add(
-                        "${tags[i]} + ${tags[j]}"
-                    )
+    for (i in currentTags.indices) {
+        combinations.add(currentTags[i])
 
-                    for (k in j + 1 until tags.size) {
-                        combinations.add(
-                            "${tags[i]} + ${tags[j]} + ${tags[k]}"
-                        )
-                    }
-                }
+        for (j in i + 1 until currentTags.size) {
+            combinations.add(
+                "${currentTags[i]} + ${currentTags[j]}"
+            )
+
+            for (k in j + 1 until currentTags.size) {
+                combinations.add(
+                    "${currentTags[i]} + ${currentTags[j]} + ${currentTags[k]}"
+                )
             }
+        }
+    }
 
-            result.text = buildString {
-                append("分析完成！共 ${combinations.size} 種組合\n\n")
-                combinations.forEachIndexed { index, item ->
-                    append("${index + 1}. $item\n")
-                }
-            }
+    result.text = buildString {
+        append("分析完成！共 ${combinations.size} 種組合\n\n")
+        combinations.forEachIndexed { index, item ->
+            append("${index + 1}. $item\n")
+        }
+    }
         }
 
         val scroll = ScrollView(this)
@@ -213,16 +247,22 @@ if (requestCode == 2001) {
         textRecognizer.process(image)
             .addOnSuccessListener { visionText ->
                 val recognizedText = visionText.text
-                val foundTags = tags.filter { tag ->
-                    recognizedText.contains(tag)
-                }
+                val normalizedText = recognizedText.replace(
+    "\\s+".toRegex(), ""
+)
 
-                status.text = if (foundTags.isNotEmpty()) {
-                    "辨識到的標籤：\n" +
-                    foundTags.joinToString("\n") { "・$it" }
-                } else {
-                    "沒有辨識到測試標籤，請確認截圖是否清晰。"
-                }
+val foundTags = tags.filter { tag ->
+    normalizedText.contains(
+        tag.replace("\\s+".toRegex(), "")
+    )
+}
+detectedTags = foundTags
+status.text = if (foundTags.isNotEmpty()) {
+    "辨識到的標籤：\n" +
+    foundTags.joinToString("\n") { "・$it" }
+} else {
+    "沒有辨識到標籤。\n\nOCR 原始文字：\n$recognizedText"
+}
             }
             .addOnFailureListener {
                 status.text = "辨識失敗，請重新選取截圖。"
