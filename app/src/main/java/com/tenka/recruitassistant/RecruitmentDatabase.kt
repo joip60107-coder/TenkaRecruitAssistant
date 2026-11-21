@@ -25,7 +25,6 @@ object RecruitmentDatabase {
         for (i in 0 until array.length()) {
             val item = array.getJSONObject(i)
             val tagArray = item.getJSONArray("tags")
-
             val characterTags = mutableListOf<String>()
 
             for (j in 0 until tagArray.length()) {
@@ -47,10 +46,30 @@ object RecruitmentDatabase {
 
     fun findMatching(
         context: Context,
-        selectedTags: List<String>
+        selectedTags: List<String>,
+        enlistHour: Int
     ): List<RecruitCharacter> {
+
+        if (selectedTags.isEmpty() || selectedTags.size > 3) {
+            return emptyList()
+        }
+
+        if (enlistHour != 3 && enlistHour != 9) {
+            return emptyList()
+        }
+
+        val hasLeader = selectedTags.contains("領袖")
+        val hasElite = selectedTags.contains("菁英")
+
+        val rarityLimit = when {
+            hasLeader -> 4
+            enlistHour < 4 && !hasElite -> 2
+            else -> 3
+        }
+
         return load(context).filter { character ->
-            character.tags.containsAll(selectedTags)
+            character.tags.containsAll(selectedTags) &&
+            (hasLeader || character.rarity < rarityLimit)
         }
     }
 }
