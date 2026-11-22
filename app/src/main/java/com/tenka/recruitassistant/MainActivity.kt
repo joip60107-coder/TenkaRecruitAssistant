@@ -113,19 +113,13 @@ class MainActivity : Activity() {
             textSize = 18f
             setTextColor(Color.WHITE)
         }
-        root.addView(hourTitle)
 
-        val hourSpinner = Spinner(this)
-        val hourAdapter = ArrayAdapter(
-            this,
-            android.R.layout.simple_spinner_item,
-            listOf("3 小時", "9 小時")
-        )
-        hourAdapter.setDropDownViewResource(
-            android.R.layout.simple_spinner_dropdown_item
-        )
-        hourSpinner.adapter = hourAdapter
-        root.addView(hourSpinner)
+        val hourInfo = TextView(this).apply {
+    text = "\n徵才時間：9 小時（固定）"
+    textSize = 18f
+    setTextColor(Color.WHITE)
+}
+root.addView(hourInfo)
 
         val tagTitle = TextView(this).apply {
             text = "\nOCR 辨識結果"
@@ -165,86 +159,61 @@ class MainActivity : Activity() {
 
         analyzeButton.setOnClickListener {
 
-            val currentTags = detectedTags.take(5)
+val currentTags = detectedTags
+    .take(5)
+    .filter { it != "領袖" }
 
-            if (currentTags.isEmpty()) {
-                result.text = "請先選擇截圖並辨識標籤。"
-                return@setOnClickListener
-            }
+if (currentTags.isEmpty()) {
+    result.text = "請先選擇遊戲截圖並辨識標籤。"
+    return@setOnClickListener
+}
 
-            val selectedHour =
-                if (hourSpinner.selectedItemPosition == 0) 3 else 9
+try {
+    val recommendations =
+        RecruitmentDatabase.findTopRecommendations(
+            this@MainActivity,
+            currentTags
+        )
 
-            val combinations = mutableListOf<List<String>>()
+    result.text = buildString {
+        append("徵才時間：9 小時\n")
+        append("辨識標籤：${currentTags.joinToString("、")}\n")
+        append("SR 推薦組合（最多五組）\n")
+        append("====================\n\n")
 
-            for (i in currentTags.indices) {
-                combinations.add(listOf(currentTags[i]))
+        if (recommendations.isEmpty()) {
+            append("目前沒有符合條件的推薦組合。")
+        } else {
+            recommendations.forEachIndexed { index, item ->
+                append("第 ${index + 1} 名\n")
+                append("標籤：${item.tags.joinToString(" + ")}\n")
 
-                for (j in i + 1 until currentTags.size) {
-                    combinations.add(
-                        listOf(currentTags[i], currentTags[j])
-                    )
-
-                    for (k in j + 1 until currentTags.size) {
-                        combinations.add(
-                            listOf(
-                                currentTags[i],
-                                currentTags[j],
-                                currentTags[k]
-                            )
-                        )
-                    }
+                if (item.guaranteedSR) {
+                    append("★ 保證 SR\n")
                 }
-            }
 
-            try {
-                result.text = buildString {
+                val srCharacters = item.characters.filter {
+                    it.rarity == 2
+                }
 
-                    append("招募時間：${selectedHour} 小時\n")
-                    append("辨識標籤：${currentTags.size} 個\n")
-                    append("組合數量：${combinations.size} 種\n")
-                    append("====================\n\n")
+                append("符合的 SR 角色：\n")
 
-                    combinations.forEachIndexed { index, combo ->
-
-                        val matched =
-                            RecruitmentDatabase.findMatching(
-                                this@MainActivity,
-                                combo,
-                                selectedHour
-                            )
-
-                        append("${index + 1}. ")
-                        append(combo.joinToString(" + "))
-                        append("\n")
-
-                        if (matched.isEmpty()) {
-                            append("   沒有符合角色\n")
-                        } else {
-                            append("   符合角色 ${matched.size} 名：\n")
-
-                            matched.forEach { character ->
-                                val rarityName = when (character.rarity) {
-                                    3 -> "SSR"
-                                    2 -> "SR"
-                                    1 -> "R"
-                                    else -> "N"
-                                }
-
-                                append(
-                                    "   ・${character.name}（$rarityName）\n"
-                                )
-                            }
-                        }
-
-                        append("\n")
+                if (srCharacters.isEmpty()) {
+                    append("沒有 SR 角色\n")
+                } else {
+                    srCharacters.forEach { character ->
+                        append("・${character.name}\n")
                     }
                 }
 
-            } catch (e: Exception) {
-                result.text =
-                    "讀取角色資料失敗：${e.message}\n請確認 characters.json 是否存在。"
+                append("\n--------------------\n\n")
             }
+        }
+    }
+
+} catch (e: Exception) {
+    result.text = "讀取角色資料失敗：${e.message}"
+}
         }
 
         val scroll = ScrollView(this)
