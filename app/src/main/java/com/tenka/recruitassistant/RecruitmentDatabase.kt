@@ -11,6 +11,13 @@ data class RecruitCharacter(
     val tags: List<String>
 )
 
+data class RecruitRecommendation(
+    val tags: List<String>,
+    val characters: List<RecruitCharacter>,
+    val score: Double,
+    val guaranteedSR: Boolean
+)
+
 object RecruitmentDatabase {
 
     fun load(context: Context): List<RecruitCharacter> {
@@ -44,32 +51,102 @@ object RecruitmentDatabase {
         return characters
     }
 
+    // 固定使用 9 小時規則，排除領袖組合
     fun findMatching(
         context: Context,
         selectedTags: List<String>,
         enlistHour: Int
     ): List<RecruitCharacter> {
 
-        if (selectedTags.isEmpty() || selectedTags.size > 3) {
+        if (enlistHour != 9 ||
+            selectedTags.isEmpty() ||
+            selectedTags.size > 3 ||
+            selectedTags.contains("領袖")
+        ) {
             return emptyList()
-        }
-
-        if (enlistHour != 3 && enlistHour != 9) {
-            return emptyList()
-        }
-
-        val hasLeader = selectedTags.contains("領袖")
-        val hasElite = selectedTags.contains("菁英")
-
-        val rarityLimit = when {
-            hasLeader -> 4
-            enlistHour < 4 && !hasElite -> 2
-            else -> 3
         }
 
         return load(context).filter { character ->
             character.tags.containsAll(selectedTags) &&
-            (hasLeader || character.rarity < rarityLimit)
+            character.rarity < 3
         }
+    }
+
+    // 產生 1～3 個標籤的所有組合
+    fun findTopRecommendations(
+        context: Context,
+        detectedTags: List<String>
+    ): List<RecruitRecommendation> {
+
+        val tags = detectedTags
+            .distinct()
+            .filter { it != "領袖" }
+
+        if (tags.isEmpty()) return emptyList()
+
+        val characters = load(context)
+        val recommendations = mutableListOf<RecruitRecommendation>()
+
+        fun addCombination(combo: List<String>) {
+            val matched = characters.filter { character ->
+                character.tags.containsAll(combo) &&
+                character.rarity < 3
+            }
+
+            if (matched.isEmpty()) return
+
+            val rarityExists = BooleanArray(4)
+            matched.forEach { character ->
+                if (character.rarity in 0..3) {
+                    rarityExists[character.rarity] = true
+                }
+            }
+
+            var score = 0.0
+            rarityExists.forEachIndexed { rarity, exists ->
+                if (exists) {
+                    score += (rarity - 1.4) * (rarity + 1)
+                }
+            }
+
+            val guaranteedSR = matched.all {
+                it.rarity == 2
+            }
+
+            recommendations.add(
+                RecruitRecommendation(
+                    tags = combo,
+                    characters = matched,
+                    score = score,
+                    guaranteedSR = guaranteedSR
+                )
+            )
+        }
+
+        for (i in tags.indices) {
+            addCombination(listOf(tags[i]))
+
+            for (j in i + 1 until tags.size) {
+                addCombination(listOf(tags[i], tags[j]))
+
+                for (k in j + 1 until tags.size) {
+                    addCombination(
+                        listOf(tags[i], tags[j], tags[k])
+                    )
+                }
+            }
+        }
+
+        return recommendations
+            .sortedWith(
+                compareByDescending<RecruitRecommendation> {
+                    it.guaranteedSR
+                }.thenByDescending {
+                    it.score
+                }.thenByDescending {
+                    it.tags.size
+                }
+            )
+            .take(5)
     }
 }
